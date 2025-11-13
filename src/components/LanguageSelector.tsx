@@ -28,19 +28,7 @@ export function LanguageSelector({
 
   function onSelectLanguage(targetUrl: string) {
     startTransition(() => {
-      const pathname = window.location.pathname;
-
-      // Check if we're on a detail page (blog or tips)
-      const detailPageMatch = pathname.match(/^(\/en)?\/(blog|tips)\/[^\/]+/);
-
-      if (detailPageMatch) {
-        const [, langPrefix, section] = detailPageMatch;
-        // Redirect to the opposite language's index page
-        const newLangPrefix = langPrefix ? '' : '/en';
-        window.location.href = `${newLangPrefix}/${section}/`;
-      } else {
-        window.location.href = targetUrl;
-      }
+      window.location.href = targetUrl;
     });
   }
 

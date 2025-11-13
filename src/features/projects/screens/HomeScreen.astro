@@ -6,10 +6,14 @@ import type { LanguageCode } from '@/i18n/ui';
 import { getRelativeLocaleUrl } from 'astro:i18n';
 import { Calendar, Dumbbell } from 'lucide-react';
 
-import heroImage from '@/assets/user-hero.webp';
+import heroImage from '@/assets/portada_systemtoolslab.png';
 import { Image } from 'astro:assets';
 import FeaturedProjectPreview from '../components/FeaturedProjectPreview.astro';
 import type { TranslatedProject, TranslatedSkill } from '../type';
+import { BlogPostCard } from '@/features/blog';
+import { EmptyState } from '@/components/empty-state';
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { useTranslations } from '@/i18n/ui';
 
 export type Props = {
   lang: LanguageCode;
@@ -17,16 +21,14 @@ export type Props = {
   skills: Array<TranslatedSkill>;
   heroGreeting: string;
   heroSubtitlePart1: string;
-  heroSubtitlePart2: string;
   heroIntroduction: string;
   heroViewWorkButton: string;
   heroContactButton: string;
   imageNotAvailable: string;
-  featuredProjectsTitle: string;
+  featuredBlogTitle: string;
   featuredProjectsDescription: string;
   mySkillsTitle: string;
   mySkillsDescription: string;
-  projectPreviewCtaText: string; // Added for specific project CTA
 };
 
 const {
@@ -35,17 +37,45 @@ const {
   skills,
   heroGreeting,
   heroSubtitlePart1,
-  heroSubtitlePart2,
   heroIntroduction,
   heroViewWorkButton,
   heroContactButton,
   imageNotAvailable,
-  featuredProjectsTitle,
+  featuredBlogTitle,
   featuredProjectsDescription,
   mySkillsTitle,
   mySkillsDescription,
-  projectPreviewCtaText,
 } = Astro.props;
+
+// Load latest blog posts for current locale to display in "last-articles" section
+const blogEntries: Array<CollectionEntry<'blog'>> = await getCollection(
+  'blog',
+  ({ data, id }) => {
+    return data.isDraft !== true && id.startsWith(`${lang}/`);
+  }
+);
+
+const enrichedPosts = await Promise.all(
+  blogEntries.map(async (postEntry: CollectionEntry<'blog'>) => {
+    const { remarkPluginFrontmatter } = await render(postEntry);
+    return {
+      id: postEntry.id,
+      slug: postEntry.id,
+      collection: postEntry.collection,
+      data: {
+        ...postEntry.data,
+        readingTimeMinutes: remarkPluginFrontmatter.readingTimeMinutes,
+      },
+    };
+  })
+);
+
+enrichedPosts.sort(
+  (a, b) => new Date(b.data.pubDate).valueOf() - new Date(a.data.pubDate).valueOf()
+);
+
+const t = useTranslations(lang, 'homePage');
+const blogT = useTranslations(lang, 'blogPage');
 ---
 
 <section class="py-12 md:py-16">
@@ -59,17 +89,17 @@ const {
       </h1>
       <p class="text-2xl md:text-3xl font-medium text-muted-foreground mb-2">
         <span>{heroSubtitlePart1}</span>
-        <span class="text-primary"> | </span>
-        <span>{heroSubtitlePart2}</span>
+        <span class="text-primary"></span>
       </p>
-      <p class="text-lg text-muted-foreground mb-8">
-        {heroIntroduction}
-      </p>
+      <p
+        class="text-lg text-muted-foreground mb-8"
+        set:html={heroIntroduction}
+      ></p>
       <div
         class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start"
       >
         <a
-          href="/projects"
+          href="/blog"
           class={buttonVariants({ variant: 'default', size: 'lg' })}
         >
           <Dumbbell className="mr-2 size-4" />
@@ -105,50 +135,21 @@ const {
   </div>
 </section>
 
-{/* Featured Projects Section */}
-<section id="projects" class="py-12 md:py-16 bg-muted/20 dark:bg-muted/10">
-  <Heading
-    title={featuredProjectsTitle}
-    description={featuredProjectsDescription}
-    className="flex flex-col items-center"
-  />
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    {
-      projects.slice(0, 3).map((project: TranslatedProject) => {
-        return (
-          <FeaturedProjectPreview
-            lang={lang}
-            slug={project.slug}
-            title={project.title}
-            imageUrl={project.imageUrl}
-            imageAltText={project.imageAltText}
-            ctaText={projectPreviewCtaText}
-          />
-        );
-      })
-    }
-  </div>
-</section>
-
-{/* Skills Section */}
-<section id="skills" class="py-12 md:py-16">
+{/* Last articles section */}
+<section id="last-articles" class="py-12 md:py-16">
   <div class="container mx-auto px-4">
-    <Heading
-      title={mySkillsTitle}
-      description={mySkillsDescription}
-      className="flex flex-col items-center"
-    />
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <Heading title={featuredBlogTitle} description={featuredProjectsDescription} className="flex flex-col items-center" />
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
       {
-        skills.map((skill) => (
-          <SkillCard
-            title={skill.title}
-            description={skill.description}
-            iconName={skill.iconName}
-            technologies={skill.technologies}
-          />
-        ))
+        enrichedPosts.length > 0 ? (
+          enrichedPosts.slice(0, 3).map((post) => (
+            <BlogPostCard post={post as any} lang={lang} />
+          ))
+        ) : (
+          <EmptyState title={blogT('noPostsFound') || 'No posts found'} id="no-posts-home" />
+        )
       }
     </div>
   </div>

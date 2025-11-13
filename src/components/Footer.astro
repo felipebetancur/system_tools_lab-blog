@@ -1,15 +1,76 @@
 ---
 import { defaultLanguage, useTranslations, type LanguageCode } from '@/i18n/ui';
+import CCLicense from '@/assets/cc.xlarge.png';
+import BYLicense from '@/assets/by.xlarge.png';
+import SALicense from '@/assets/sa.xlarge.png';
+import { Image } from 'astro:assets';
 
-const lang =
-  (Astro.currentLocale as LanguageCode | undefined) ?? defaultLanguage;
-const tFooter = useTranslations(lang, 'footer');
-const tSite = useTranslations(lang, 'site');
+const currentLocale = (Astro.currentLocale as LanguageCode | undefined) ?? defaultLanguage;
+const t = useTranslations(currentLocale, 'footer');
 ---
 
 <footer class="py-6 mt-auto text-center text-sm text-muted-foreground">
   <div class="container mx-auto px-4">
-    &copy; {new Date().getFullYear()}
-    {tSite('title')}. {tFooter('rights')}
+    {t('followMe')}:
+    <br />
+    <a
+      href="https://linkedin.com/in/felipe-betancur"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-primary hover:underline mx-1"
+      >LinkedIn</a
+    >
+    |
+    <a
+      href="https://x.com/FelipeBeta_lo"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-primary hover:underline mx-1"
+      >X</a
+    > |
+    <a  
+      href="https://co.pinterest.com/felipebetancurl/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-primary hover:underline mx-1"
+      >Pinterest</a
+    >
+    | <a    
+      href="https://www.instagram.com/felipebetancur.lo/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-primary hover:underline mx-1"
+      >Instagram</a
+    >
+    <br />
+    <div class="small mt-5">
+      <p>{t('license')}</p>
+      <a
+        href="http://creativecommons.org/licenses/by-sa/4.0/?ref=chooser-v1"
+        target="_blank"
+        rel="license noopener noreferrer"
+        class="mt-2 inline-block text-decoration-none"
+      >
+        <span>CC BY-SA 4.0</span>
+        <div class="mt-1 flex items-center justify-center gap-2">
+          <Image
+            src={CCLicense}
+            alt="Creative Commons License"
+            class="h-6 w-auto"
+          />
+          <Image
+            src={BYLicense}
+            alt="Creative Commons BY License"
+            class="h-6 w-auto"
+          />
+          <Image
+            src={SALicense}
+            alt="Creative Commons SA License"
+            class="h-6 w-auto"
+          />
+        </div>
+      </a>
+    </div>
+    
   </div>
 </footer>

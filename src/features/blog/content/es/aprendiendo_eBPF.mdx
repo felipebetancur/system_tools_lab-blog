@@ -1,0 +1,256 @@
+---
+lang: 'es'
+title: "Aprendiendo eBPF para observabilidad, optimización y seguridad."
+description: "Tutoriales eBPF"
+pubDate: 2025-11-13
+heroImage:
+  url: '../../../../assets/hero_articulo_eBPF.png'
+  alt: 'Image Placeholder pour Article'
+tags: ['eBPF', 'Linux', 'Observabilidad', 'Seguridad', 'Optimización', 'BCC', 'Python']
+difficulty: 'beginner'
+isDraft: false
+featured: true
+relatedPosts: []
+---
+
+import InfoAlert from '@/features/blog/components/InfoAlert.astro';
+import { Image } from 'astro:assets';
+import opensnoop_output from '@/assets/opensnoop_output.png';
+import hello_ebpf_output from '@/assets/holamundo.png';
+import bcc_tools from '@/assets/bcc_tracing_tools_2019.png';
+import openfiles_output from '@/assets/openfiles_output.png';
+
+# Contenido
+  - [🧠 ¿Qué es eBPF?](#que-es-ebpf)
+  - [⚙️ ¿Cómo funciona eBPF?](#como-funciona-ebpf)
+  - [🧮 ¿Para qué se utiliza eBPF?](#para-que-se-utiliza-ebpf)
+  - [🚀 ¿Cómo empezar con eBPF?](#como-empezar-con-ebpf)
+  - [🧑‍💻 Escribiendo programas eBPF sencillos con BCC](#escribiendo-programas-ebpf-sencillos-con-bcc)
+  - [✨ Conclusión](#conclusion)
+  - [📚 Bibliografía y recursos recomendados](#bibliografia-y-recursos-recomendados)
+
+<h2 id="que-es-ebpf">🧠 ¿Qué es eBPF?</h2>
+eBPF (Extended Berkeley Packet Filter) es una tecnología avanzada de Linux que permite la ejecución segura de programas en el espacio del kernel sin necesidad de modificar el código o cargar módulos; brindando una forma eficiente y flexible de monitorear, analizar y modificar el comportamiento del sistema operativo en tiempo real. eBPF se ha convertido en una herramienta esencial para la observabilidad, seguridad y optimización del rendimiento en sistemas Linux, aunque también es compatible con otras plataformas como Windows a través de proyectos como <a href="https://github.com/microsoft/ebpf-for-windows" target="_blank">eBPF for Windows</a> y para sistemas embebidos con proyectos como <a href="https://github.com/SzymonKubica/micro-bpf" target="_blank">micro-BPF</a>; aquí nos centraremos en su uso y funcionamiento en Linux.
+
+<h2 id="como-funciona-ebpf">⚙️ ¿Cómo funciona eBPF?</h2>
+Ésta tecnología permite a los desarrolladores escribir programas en un lenguaje de bajo nivel similar a C. Estos programas se compilan y se convierten a un *bytecode* eBPF que es verificado por el kernel de Linux para garantizar que sea seguro antes de ser cargado y ejecutado en el espacio del kernel. Los programas eBPF pueden adjuntarse a varios puntos de entrada en el kernel, como llamadas al sistema, eventos de red, todos los puntos donde se puede recoger información con *perf*, rastreo de funciones, y más; lo que permite una gran flexibilidad en su uso.
+
+
+<h2 id="para-que-se-utiliza-ebpf">🧮 ¿Para qué se utiliza eBPF?</h2>
+Se utiliza para una variedad de propósitos, incluyendo:
+- **Monitoreo**: permite la recolección de métricas y eventos del sistema en tiempo real.
+- **Seguridad**: facilita la implementación de políticas de seguridad y la detección de intrusiones.
+- **Optimización del rendimiento**: ayuda a identificar cuellos de botella y mejorar la eficiencia del sistema.
+- **Redes**: mejora la gestión del tráfico de red y la implementación de *firewalls*.
+
+Existen muchos proyectos y herramientas que aprovechan y facilitan el uso de eBPF, algunos son:
+- <a href="https://cilium.io/" target="_blank">Cilium</a>: una plataforma de redes y seguridad para contenedores que utiliza eBPF para proporcionar visibilidad y control de red.
+- <a href="https://github.com/iovisor/bcc" target="_blank">BCC (BPF Compiler Collection)</a>: un conjunto de herramientas y bibliotecas para crear programas eBPF de manera sencilla.
+- <a href="https://github.com/iovisor/bpftrace" target="_blank">bpftrace</a>: una herramienta de trazado de alto nivel que facilita la escritura de scripts eBPF para monitoreo y depuración.
+- <a href="https://github.com/libbpf/libbpf" target="_blank">libbpf</a>: una biblioteca que proporciona una API para interactuar con eBPF desde aplicaciones de usuario. 
+
+<h2 id="como-empezar-con-ebpf">🚀 ¿Cómo empezar con eBPF?</h2>
+En éste artículo, usaremos comandos *one-liners* de eBPF para obtener información básica del sistema y escribiremos un programa simple usando la biblioteca BCC en Python. Asegúrate de tener un entorno Linux con soporte para eBPF (kernel 4.4 o superior) y las herramientas necesarias instaladas.
+Para empezar instalaremos BCC y las demás herramientas necesarias en una distribución basada en Debian/Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install bpfcc-tools linux-headers-$(uname -r) libbpfcc-dev python3-bpfcc
+``` 
+Las herramientas de BCC incluyen varios scripts útiles que podemos usar directamente desde la línea de comandos. Por ejemplo, para monitorear los archivos abiertos en el sistema, con información sobre el proceso que los abrió y el nombre del archivo, podemos usar el siguiente comando: 
+```bash
+sudo /usr/sbin/opensnoop-bpfcc
+```
+Mientras el comando está en ejecución, abre otro terminal y ejecuta el comando "ls" o abre archivos para ver cómo se registran en tiempo real. Para detener la ejecución y mirar la salida, presiona **Ctrl + C** en el primer terminal.
+<figure class="my-6">
+  <Image
+    src={opensnoop_output}
+    alt="Salida del comando opensnoop-bpfcc mostrando procesos como code, ls y los archivos que están abriendo."
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Salida del comando opensnoop-bpfcc mostrando procesos como code,ls y los archivos que están abriendo.
+  </figcaption>
+</figure>
+Este comando nos proporciona una visión en tiempo real de los archivos que se están abriendo en el sistema, en el caso del ejemplo, vemos procesos como *code* y *ls* y los archivos que están abriendo; ésta información es útil para monitorear la actividad del sistema y detectar comportamientos inusuales. En el repositorio de <a href="https://github.com/iovisor/bcc" target="_blank">BCC</a>, encontrarás scripts y *one-liners* de eBPF que puedes explorar para diferentes propósitos, como monitorear el uso de CPU, la actividad de red, entre otros.
+<figure class="my-6">
+  <Image
+    src={bcc_tools}
+    alt="Herramientas de trazado de BCC 2019."
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Diagrama de herramientas de trazado disponibles en BCC.
+  </figcaption>
+</figure>
+<h2 id="escribiendo-programas-ebpf-sencillos-con-bcc">🧑‍💻 Escribiendo programas eBPF sencillos con BCC</h2>
+Ahora, vamos a escribir un programa eBPF simple que imprima: "Hola, mundo" cada que se crea un nuevo proceso usando la llamada al sistema *sys_clone*. 
+Crea un archivo llamado **hello_ebpf.py** y agrega el siguiente código:
+
+```python
+#!/usr/bin/python
+#
+# This is a Hello World example that formats output as fields.
+
+from bcc import BPF
+from bcc.utils import printb
+
+# define BPF program
+prog = """
+int hello(void *ctx) {
+    bpf_trace_printk("Hola, mundo!\\n");
+    return 0;
+}
+"""
+
+# load BPF program
+b = BPF(text=prog)
+b.attach_kprobe(event=b.get_syscall_fnname("clone"), fn_name="hello")
+
+# header
+print("%-18s %-16s %-6s %s" % ("TIME(s)", "COMM", "PID", "MESSAGE"))
+
+# format output
+while 1:
+    try:
+        (task, pid, cpu, flags, ts, msg) = b.trace_fields()
+    except ValueError:
+        continue
+    except KeyboardInterrupt:
+        exit()
+    printb(b"%-18.9f %-16s %-6d %s" % (ts, task, pid, msg))
+``` 
+Guarda el archivo y ejecuta el script con permisos de superusuario:
+
+```bash
+sudo python3 hello_ebpf.py
+```
+Ahora, cada vez que se cree un nuevo proceso en el sistema, verás el mensaje "Hola, mundo!" en la salida de la terminal, junto con información sobre el proceso que lo generó. Puedes probar esto abriendo nuevas terminales y ejecutando comandos como "ls", "cat", etc. Para detener la ejecución, presiona **Ctrl + C**.
+<figure class="my-6">
+  <Image
+    src={hello_ebpf_output}
+    alt="Hola, mundo en tiempo real con eBPF."
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Salida del programa hello_ebpf.py mostrando "Hola, mundo!" cada que se crea un nuevo proceso.
+  </figcaption>
+</figure>
+El script utiliza BCC para definir un programa eBPF que se adjunta a la llamada al sistema *clone*, que es responsable de crear nuevos procesos. Cada vez que se llama a *clone*, el programa eBPF imprime el mensaje en el búfer de trazas del kernel, que luego es leído, formateado y presentado en la terminal por el script de Python.
+
+⚠️ La función bpf_trace_printk() es simple pero tiene limitaciones (máximo 3 argumentos) y solo debe usarse para pruebas. Para herramientas de producción, se usa BPF Maps o perf buffers para una transferencia de datos eficiente entre el kernel y el espacio de usuario.
+
+Volviendo a nuestro primer *one-liner* **opensnoop-bpfcc**, escribamos una versión simplificada en Python usando BCC. Crea un archivo llamado **open_files.py** y agrega el siguiente código:
+
+```python
+#!/usr/bin/python
+
+from bcc import BPF
+
+prog = """
+struct data_t {
+    u32 pid;
+    char comm[16];
+    char filename[256];
+};
+
+BPF_PERF_OUTPUT(events);
+
+TRACEPOINT_PROBE(syscalls, sys_enter_openat) {
+    struct data_t data = {};
+
+    // Obtener PID y comando
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    data.pid = pid_tgid >> 32;
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+
+    // Leer filename desde los argumentos del tracepoint
+    // args->filename contiene el puntero
+    bpf_probe_read_user_str(&data.filename, sizeof(data.filename), (void *)args->filename);
+
+    events.perf_submit(args, &data, sizeof(data));
+
+    return 0;
+}
+"""
+
+b = BPF(text=prog)
+
+print("%-16s %-6s %s" % ("PROCESO", "PID", "ARCHIVO"))
+print("=" * 80)
+
+def print_event(cpu, data, size):
+    event = b["events"].event(data)
+
+    comm = event.comm.decode('utf-8', 'replace')
+    filename = event.filename.decode('utf-8', 'replace').rstrip('\x00')
+
+    # Solo imprimir si hay un nombre de archivo válido
+    if filename and len(filename) > 0:
+        print("%-16s %-6d %s" % (comm, event.pid, filename))
+
+b["events"].open_perf_buffer(print_event)
+
+print("Capturando... Presiona Ctrl+C para salir\n")
+
+try:
+    while 1:
+        b.perf_buffer_poll()
+except KeyboardInterrupt:
+    print("\nFinalizando...")
+``` 
+Guarda el archivo y ejecútalo con permisos de superusuario:
+```bash
+sudo python3 open_files.py
+```
+Ahora, cada vez que un proceso abra un archivo, verás el nombre del proceso, su PID y el nombre del archivo en la terminal. Puedes verificar abriendo otra terminal y ejecutando comandos que abran archivos, como "cat", "ls", etc.
+
+<figure class="my-6">
+  <Image
+    src={openfiles_output}
+    alt="Salida del script open_files.py mostrando procesos y archivos abiertos."
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Salida del script open_files.py capturando archivos abiertos con información sobre el proceso que los abre.
+  </figcaption>
+</figure>
+
+En éste script usamos de nuevo la biblioteca BCC para cargar y ejecutar un programa eBPF que rastrea las llamadas al sistema de apertura de archivos mediante el *tracepoint* *"syscalls:sys_enter_openat"*.
+
+Explicación breve del código:
+- Se define la estructura *(data_t)* para guardar el PID del proceso, el nombre del comando y el nombre del archivo abierto.
+
+- Se usa un *tracepoint probe* sobre *sys_enter_openat* que se activa cada vez que un proceso llama a la función openat para abrir un archivo.
+
+- En el *probe*, obtenemos el PID y el nombre del comando del proceso actual.
+
+- Luego, usamos *bpf_probe_read_user_str* para leer el nombre del archivo abierto.
+
+- Enviamos la información a espacio usuario a través de un buffer de eventos *perf (events.perf_submit)*.
+
+- En Python, se imprime una cabecera y se define una función para recibir eventos desde el buffer perf y mostrar en consola el proceso, PID y archivo abierto.
+
+- Se ejecuta un loop que escucha eventos en tiempo real hasta que se interrumpe con Ctrl+C.
+
+
+<h2 id="conclusion">✨ Conclusión</h2>
+eBPF es una tecnología poderosa que ofrece numerosas ventajas para la observabilidad, seguridad y optimización del rendimiento en sistemas Linux. En éste artículo exploramos herramientas *one-liners* de eBPF disponibles en BCC, y escribimos programas simples en Python usando la biblioteca BCC para monitorear la apertura de archivos y la creación de procesos. Aunque BCC ofrece una manera rápida y sencilla de trabajar con eBPF ya que nos da una capa de abstracción adicional que nos ayuda con el proceso de compilación y ejecución de programas, existen otras bibliotecas más avanzadas para trabajar con eBPF. En el próximo artículo exploraremos un poco más sobre los puntos de entrada o *hooks* disponibles en eBPF, además de cómo usar la biblioteca libbpf y bpftool para escribir programas eBPF en lenguaje C, compilarlos y cargarlos en el kernel de Linux.
+
+<h2 id="bibliografia-y-recursos-recomendados">📚 Bibliografía y recursos recomendados</h2>
+- <a href="https://ebpf.io/" target="_blank">eBPF Documentation</a>
+- <a href="https://cilium.io/" target="_blank">Cilium</a>
+- <a href="https://github.com/iovisor/bcc" target="_blank">BCC GitHub Repository</a>
+- <a href="https://github.com/iovisor/bcc/blob/master/docs/tutorial_bcc_python_developer.md" target="_blank">bcc Python Developer Tutorial</a>
+- <a href="https://www.brendangregg.com/ebpf.html" target="_blank">Linux Extended BPF (eBPF) Tracing Tools</a>
+- <a href="https://github.com/libbpf/libbpf" target="_blank">libbpf GitHub Repository</a>
+- <a href="https://github.com/libbpf/bpftool" target="_blank">bpftool GitHub Repository</a>
+- <a href="https://github.com/iovisor/bpftrace" target="_blank">bpftrace GitHub Repository</a>

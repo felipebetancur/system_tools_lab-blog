@@ -15,7 +15,7 @@ interface Props {
 const { tip } = Astro.props;
 const { Content } = await render(tip);
 
-const lang = tip.data.lang || 'fr';
+const lang = tip.data.lang;
 const t = useTranslations(lang, 'tipsPage');
 
 const GITHUB_USER = 'YOUR_GITHUB_USERNAME';
@@ -72,7 +72,6 @@ const editUrl = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/edit/${GITHUB_
         class={buttonVariants({ variant: 'ghost' }) + ' no-underline'}
       >
         <Pencil className="size-4" />
-        {t('editOnGithub')}
       </a>
     </footer>
   </article>

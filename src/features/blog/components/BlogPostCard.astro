@@ -26,7 +26,10 @@ const t = useTranslations(lang, 'blogPost');
 ---
 
 <a
-  href={getRelativeLocaleUrl(lang, `/blog/${post.id}`)}
+  href={getRelativeLocaleUrl(
+    lang,
+    `/blog/${post.id.replace(/^(es|en)\//, '')}`
+  )}
   class="block group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 >
   <Card

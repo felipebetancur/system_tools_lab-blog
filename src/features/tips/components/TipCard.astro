@@ -21,6 +21,7 @@ interface Props {
 
 const { tip, lang } = Astro.props;
 const t = useTranslations(lang, 'tipsPage');
+const slug = tip.id.replace(/^(es|en)\//, '');
 ---
 
 <Card
@@ -35,7 +36,7 @@ const t = useTranslations(lang, 'tipsPage');
       className="text-xl font-semibold group-hover:text-primary transition-colors pr-12"
     >
       <a
-        href={getRelativeLocaleUrl(lang, `/tips/${tip.id}/`)}
+        href={getRelativeLocaleUrl(lang, `/tips/${slug}/`)}
         class="hover:underline"
       >
         {tip.data.title}
@@ -74,7 +75,7 @@ const t = useTranslations(lang, 'tipsPage');
       class="flex items-center justify-between w-full border-t border-border/50 pt-4"
     >
       <a
-        href={getRelativeLocaleUrl(lang, `/tips/${tip.id}/`)}
+        href={getRelativeLocaleUrl(lang, `/tips/${slug}/`)}
         class="flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors group/link"
       >
         {t('readTip')}
