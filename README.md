@@ -196,9 +196,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Oscar Felipe Betancur Lopera**
 
-- Website: [systemtoolslab.com](https://tu-sitio.com)
-- GitHub: [@FelipeBetancur](https://github.com/FelipeBetancur)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/tu-usuario)
+- Website: [felipebetancur-blog](https://felipebetancur-blog.netlify.app/)
+- GitHub: [@FelipeBetancur](https://github.com/felipebetancur)
+- LinkedIn: [LinkedIn](https://www.linkedin.com/in/oscar-felipe-betancur-lopera/)
 
 ## 🙏 Acknowledgments
 
@@ -206,10 +206,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - UI components from [shadcn/ui](https://ui.shadcn.com)
 - Icons by [Lucide](https://lucide.dev)
 - Inspired by the open source community
-
-## 📧 Contact
-
-Questions or feedback? Feel free to [open an issue](https://github.com/tu-usuario/systemtoolslab-blog/issues) or reach out!
 
 ---
 
