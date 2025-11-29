@@ -1,0 +1,335 @@
+---
+lang: 'es'
+title: "eBPF: conceptos y programas en C con libbpf y bpftool"
+description: "Tutoriales eBPF"
+pubDate: 2025-11-30
+heroImage:
+  url: '../../../../assets/hero_articulo_eBPF_C.png'
+  alt: 'Image Placeholder pour Article'
+tags: ['eBPF', 'Linux', 'Observabilidad', 'Seguridad', 'Optimización', 'C', 'libbpf', 'bpftool']
+difficulty: 'beginner'
+isDraft: false
+featured: true
+relatedPosts: []
+---
+
+import InfoAlert from '@/features/blog/components/InfoAlert.astro';
+import { Image } from 'astro:assets';
+import exec_output from '@/assets/exec.png';
+import comandos from '@/assets/comandos.png';
+import sched_exec_output from '@/assets/salida_sched_eBPF.png';
+
+# Contenido
+  - [▶ Introducción](#introduccion)
+  - [✏️ Breve repaso y, ¿por qué escribir programas eBPF usando C?](#repaso_ebpf_lenguaje_c)
+  - [🧩 Componentes esenciales de eBPF](#como-funciona-ebpf)
+    - [Puntos de anclaje (hooks) y tipos de programas eBPF](#hooks)
+    - [Funciones auxiliares *helper functions*](#helper_functions)
+    - [Mapas eBPF](#eBPF_Maps)
+  - [📜 libbpf y bpftool](#libbpf_bpftool)
+  - [🇨 Primer programa eBPF en C](#primer_programa_ebpf_en_c)
+  - [🧑‍💻 Ejemplo práctico de eBPF en C](#ejemplo_practico_ebpf_en_c)
+  - [✅ Casos de uso](#casos_de_uso)
+  - [✨ Conclusiones](#conclusion)
+  - [📚 Bibliografía y recursos recomendados](#bibliografia_y_recursos_recomendados)
+
+<h2 id="introduccion"> ▶ Introducción</h2>
+En el artículo <a href="https://system-tools-lab-blog.vercel.app/blog/aprendiendo_ebpf/" target="_blank">Aprendiendo eBPF para observabilidad, optimización y seguridad</a> exploramos conceptos básicos de eBPF, y escribimos algunos ejemplos básicos en Python usando BCC. En éste artículo continuamos descubriendo el potencial de eBPF entendiendo un poco más sobre los puntos de anclaje, ganchos o (*hooks*) disponibles en eBPF que están asociados a los tipos de programas que podemos ejecutar en el espacio del kernel, las funciones de ayuda (*helper functions*) y los mapas de eBPF. Luego estudiaremos la biblioteca libbpf y la herramienta bpftool que nos servirán para escribir y cargar programas eBPF escritos en C en el espacio del kernel. Pero antes:
+
+<h2 id="repaso_ebpf_lenguaje_c">✏️ Breve repaso y, ¿por qué escribir programas eBPF usando C?</h2>
+eBPF nos permite expandir las funcionalidades del kernel en tiempo de ejecución por medio de bibliotecas y herramientas que nos ayudan a escribir, cargar y ejecutar programas en el nivel del núcleo del sistema operativo sin modificar el código fuente del kernel ni añadir módulos. Los programas eBPF pueden adjuntarse en diferentes puntos del núcleo para diferentes propósitos como recopilar información, modificar información, tomar decisiones en tiempo real para responder a amenazas de seguridad, entre otros. Una de las herramientas que usamos para compilar y ejecutar los programas eBPF es BCC ya que debido a su facilidad de uso es buena para hacer prototipos rápidos y explorar funciones, pero implica una sobrecarga de tiempo de ejecución y además nos abstrae de ciertos pasos del proceso que es bueno conocer. 
+
+Elegí el lenguaje C para este tutorial por dos motivos principalmente: el primero es personal, me gustan los sistemas embebidos y el lenguaje dominante en ese ámbito es C, el segundo es que la biblioteca libbpf, el kernel de Linux, git y muchas otras herramientas importantes usan C. Los lenguajes de programación son herramientas cada uno más útil para unos casos que para otros, en este punto eBPF tiene una gran fortaleza al tener un ecosistema de desarrollo para diferentes lenguajes de programación como: Rust, Go, Python, Java, C/C++, que facilitan el trabajo en diferentes áreas. Con esto en mente revisemos algunos puntos importantes de la tecnología eBPF.
+
+
+<h2 id="componentes_ebpf">🧩 Componentes esenciales de eBPF</h2>
+Algunos de los componentes esenciales de eBPF son: la máquina virtual integrada en el núcleo de Linux, el verificador que garantiza la seguridad del programa antes de cargarlo, el compilador JIT (*Just-In-Time*), los puntos de enganche (*hooks*), las funciones de ayuda (*helper functions*) y los mapas de eBPF, entre otros. En éste artículo nos centraremos en los siguientes:
+
+    <h3 id="hooks">Puntos de anclaje (hooks) y tipos de programas eBPF</h3>
+    Los ganchos o *hooks* son puntos en el kernel donde se pueden adjuntar los programas eBPF para que cuando el núcleo alcance el gancho ejecute el programa. Estos puntos o ganchos están asociados a diferentes eventos como: eventos de red, llamadas al sistema, puntos de seguimiento del kernel, eventos de hardware, entre otros, incluso es posible crear algunos *hooks* personalizados. 
+    <h3 id ="helper_functions">Funciones auxiliares *helper functions*</h3>
+    Debido a que los programas eBPF son limitados y están restringidos por el verificador para evitar romper el sistema existen las funciones auxiliares, un conjunto de funciones en C definidas por el núcleo que forman una API interna entre los programas eBPF y el kernel. Por ejemplo existen funciones auxiliares para imprimir mensajes, manipular paquetes de red, monitorear el sistema, interactar con los mapas eBPF, entre otros. Para ver una lista de funciones auxiliares organizadas por tipo puedes visitar éste enlace: <a href="https://docs.ebpf.io/linux/helper-function/" target="_blank">eBPF Docs. Helper functions</a> O la lista completa en la *man page* <a href="https://man7.org/linux/man-pages/man7/bpf-helpers.7.html" target="_blank">*list of eBPF helper functions*</a>
+    <h3 id ="eBPF_Maps">Mapas eBPF</h3>
+    Los mapas son la forma en la que los programas eBPF se comunican entre sí en el espacio del kernel y con el espacio del usuario, existen mapas genéricos para diferentes casos de uso, mapas para mantener referencias a otros mapas, mapas para transmitir grandes cantidades de información entre el espacio del kernel y el espacio del usuario, mapas para facilitar el redireccionamiento de paquetes entre dispositivos de red, entre otros. Puedes ver una lista de mapas disponibles en: <a href="https://docs.ebpf.io/linux/map-type/" target="_blank">*Map types (Linux)*</a>
+
+
+
+<h2 id="libbpf_bpftool">📜 libbpf y bpftool</h2>
+**libbpf** es una librería en C que actúa como el cargador de programas eBPF en el kernel, su principal función es tomar los archivos eBPF compilados, gestionar la carga, la verificación además se encarga de adjuntar y remover los programas de los *hooks*. También incluye soporte para el principio *CO-RE* (*Compile Once - Run Everywhere*) que permite la portabilidad de los programas eBPF; libbpf ofrece soporte para el esqueleto BPF generado por la herramienra **bpftool** facilitando la creación y manipulación de programas eBPF para crear aplicaciones.
+Una aplicación eBPF consiste de uno o más programas eBPF, mapas y variables globales, todo esto se coordina por medio de la API de libbpf manipulando los programas y ejecutándolos en diferentes fases de su ciclo de vida. El ciclo de vida de un programa eBPF es el siguiente: apertura, carga, enganche, y desmontaje.
+
+**bpftool** es una herramienta de línea de comandos conocida como la navaja suiza de eBPF, nos permite cargar, gestionar y manipular programas eBPF en el espacio del kernel, ésta herramienta usa la biblioteca libbpf y es fundamental para generar los archivos de cabecera *vmlinux.h* y los esqueletos eBPF usados para escribir programas eBPF en C.
+
+Ejemplo: para ver que programas eBPF están cargados en el kernel de linux con información detallada:
+```bash
+sudo bpftool prog list
+``` 
+
+<h2 id="primer_programa_ebpf_en_c">🇨 Primer programa eBPF en C</h2>
+Recordemos que los programas eBPF se componen de dos partes: el programa del espacio de usuario y el programa del kernel que es la parte que va a ser cargada y ejecutada dentro del núcleo de Linux cuando ocurra un evento específico.
+Usando un ejemplo del repositorio <a href="https://github.com/masmullin2000/libbpf-sample" target="_blank">libbpf-sample</a>, vamos a escribir nuestro primer programa eBPF del espacio de usuario en C, con la ayuda de libbpf para el ciclo de vida del programa, es decir, para abrirlo, cargarlo y adjuntarlo al gancho o *hook*.
+Crea una carpeta vacía para el ejemplo, y allí crea un archivo llamado **exec.c** con el siguiente código:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/resource.h>
+
+#include "exec.skel.h"
+
+static void bump_memlock_rlimit(void)
+{
+	struct rlimit rlim_new = {
+		.rlim_cur	= RLIM_INFINITY,
+		.rlim_max	= RLIM_INFINITY,
+	};
+
+	if (setrlimit(RLIMIT_MEMLOCK, &rlim_new)) {
+		fprintf(stderr, "Failed to increase RLIMIT_MEMLOCK limit!\n");
+		exit(1);
+	}
+}
+
+int main(void)
+{
+    bump_memlock_rlimit();
+
+    struct exec *skel = exec__open();
+    exec__load(skel);
+    exec__attach(skel);
+
+    for(;;) {
+    }
+    return 0;
+}
+``` 
+Ahora vamos a escribir nuestro primer código para el espacio del kernel. En la misma carpeta crea otro archivo llamado **exec.bpf.c**
+```c
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+
+SEC("tp/syscalls/sys_enter_execve")
+int handle_execve(void *ctx)
+{
+    bpf_printk("Exec Called\n");
+    return 0;
+}
+
+char LICENSE[] SEC("license") = "GPL";
+```
+Repasemos brevemente los programas antes de continuar: en el código **exec.c** incluimos el esqueleto del programa *exec.skel.h* el cual vamos a generar usando **bpftool**. También vemos la función *bump_memlock_rlimit();* que era necesaria en versiones del kernel anteriores a la v5.11 para aumentar la memoria bloqueada para los mapas y buffers de los programas eBPF, a partir de la v5.11 ésto es opcional ya que la nueva forma de aumentar los recursos es con la configuración *memory.max* del *cGroup* del que forma parte el proceso que lo crea. En el código **exec.bpf.c** incluimos la cabecera *vmlinux.h* que también debemos generar usando **bpftool**. Ahora que ya tenemos los dos archivos seguimos las siguientes etapas de compilación y ejecución:
+
+1. Generar el archivo *vmlinux.h* con bpftool:
+```bash
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+```
+Éste archivo nos proporciona una colección completa de las estructuras y tipos de datos del kernel en ejecución, ésto lo hace leyendo y procesando la información de formato tipo BPF (**BTF**). Dicha colección permite que los programas eBPF que escribamos en C puedan acceder de forma segura a las estructuras internas del kernel, como por ejemplo *task_struct* y nos evita la necesidad de incluir manualmente muchos *headers* de Linux.
+
+2. Compilar el programa para el kernel:
+
+Usando el compilador *Clang/LLVM* transformamos el programa *exec.bpf.c* en **bytecode** eBPF dentro de un archivo ELF o en este caso un archivo *.o*. Esto lo hacemos con el comando:
+```bash
+clang -g -O3 -target bpf -c exec.bpf.c -o exec.bpf.o
+```
+💡 Con la opción del compilador *-D__TARGET_ARG_xxx* se puede hacer compilación cruzada, por ejemplo para usar eBPF en sistemas embebidos.
+
+3. Generar el esqueleto:
+```bash
+bpftool gen skeleton exec.bpf.o name exec > exec.skel.h
+```
+Utilizando bpftool se toma el archivo objeto para generar el esqueleto **exec.skel.h** que contendrá las estructuras y funciones necesarias como: **exec__open(), exec__load(skel), exec__attach(skel)**, en este punto el archivo *exec.skel.o* ya no es necesario y se puede eliminar. 
+
+4. Compilar el programa de espacio de usuario:
+
+Se convierte el archivo en un ejecutable enlazado con la biblioteca **libbpf** usando *clang* o *gcc* aquí la compilación es normal.
+```bash
+clang exec.c -lbpf -lelf -o exec.o
+```
+El programa se ejecuta con:
+```bash
+sudo ./exec.o
+```
+Puedes ver la salida en otra terminal con: 
+```bash
+sudo cat /sys/kernel/tracing/trace_pipe
+```
+Para detener presiona Ctrl+C en ambas terminales.
+
+<figure class="my-6">
+  <Image
+    src={exec_output}
+    alt="Terminal mostrando la salida del programa eBPF capturando llamadas a execve"
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Terminal mostrando la salida del programa eBPF capturando llamadas a execve.
+  </figcaption>
+</figure>
+
+<h2 id="ejemplo_practico_ebpf_en_c">🧑‍💻 Ejemplo práctico de eBPF en C</h2>
+Ahora, vamos a escribir un programa eBPF más práctico que en lugar de imprimir un mensaje con *bpf_printk()* use *ring buffers* para transmitir información como el nombre y el PID del proceso que está disparando el *hook* del *scheduler* asociado a la correcta ejecución de un programa. Vamos a crear una nueva carpeta con los archivos exec.c, exec.bpf.c y exec.h. así:
+
+**exec.c**
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <bpf/libbpf.h>
+#include "exec.h"
+
+
+#include "exec.skel.h"
+
+static volatile bool exiting = false;
+
+static int handle_event(void *ctx, void *data, size_t data_sz)
+{
+    const struct exec_evt *e = data;
+
+    printf("Process executed: %-16s (PID: %d)\n", e->comm, e->pid);
+
+    return 0;
+}
+
+
+static int bump_memlock_rlimit(void)
+{
+    struct rlimit rlim_new = {
+        .rlim_cur = RLIM_INFINITY,
+        .rlim_max = RLIM_INFINITY,
+    };
+    if (setrlimit(RLIMIT_MEMLOCK, &rlim_new)) {
+        fprintf(stderr, "Failed to increase RLIMIT_MEMLOCK limit!\n");
+        return -1;
+    }
+    return 0;
+}
+
+
+int main(void)
+{
+    bump_memlock_rlimit();
+
+    struct exec *skel = exec__open();
+    exec__load(skel);
+    exec__attach(skel);
+    struct ring_buffer *rb = ring_buffer__new(bpf_map__fd(skel->maps.rb), handle_event, NULL, NULL);
+
+    for(;;) {
+        ring_buffer__poll(rb, 1000);
+    }
+    return 0;
+}
+```
+
+**exec.bpf.c**
+```c
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_tracing.h>
+#include "exec.h"
+
+char LICENSE[] SEC("license") = "Dual BSD/GPL";
+
+// Ring Buffer (256KB)
+struct {
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 256 * 1024);
+} rb SEC(".maps");
+
+// Hook
+SEC("tp/sched/sched_process_exec")
+int handle_exec(struct trace_event_raw_sched_process_exec *ctx)
+{
+    struct exec_evt *e;
+
+    // Ring buffer size reserve
+    e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
+    if (!e)
+        return 0;
+
+    // Event
+    e->pid = bpf_get_current_pid_tgid() >> 32; // TGID (user PID)
+    bpf_get_current_comm(&e->comm, sizeof(e->comm)); // name of the process
+
+    bpf_ringbuf_submit(e, 0); // transmit to user space
+
+    return 0;
+}
+
+```
+**exec.h**
+```c
+#ifndef __EXEC_H__
+#define __EXEC_H__
+
+struct exec_evt {
+    pid_t pid;
+    pid_t tgid;
+    char comm[32];
+    char file[32];
+};
+
+#endif // __EXEC_H__
+```
+
+Repite las etapas de compilación y ejecución del primer ejemplo. Al ejecutarlo con permisos de superusuario en la terminal se muestran en tiempo real todos los procesos creados de manera exitosa su nombre y PID. 
+<figure class="my-6">
+  <Image
+    src={comandos}
+    alt="Etapas de compilación"
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Terminal mostrando los cuatro pasos de compilación de eBPF: generación de vmlinux.h, compilación a bytecode, generación del esqueleto y compilación del ejecutable final.
+  </figcaption>
+</figure>
+
+Puedes abrir nuevas terminales, ejecutar comandos como *ls*, *cat*, *vim* o cualquier otro programa, y verás cómo el programa eBPF captura inmediatamente cada llamada al punto de trazado del *scheduler* que se activa cada vez que *execve()* se haya ejecutado de manera exitosa. Para detener la ejecución, presiona `Ctrl+C`. Este ejemplo demuestra cómo los *ring buffers* permiten una comunicación eficiente entre el espacio del kernel y el espacio de usuario, siendo una técnica fundamental para herramientas de monitoreo y auditoría de sistemas en producción.
+
+<figure class="my-6">
+  <Image
+    src={sched_exec_output}
+    alt="Terminal mostrando la salida del programa eBPF adjunto al hook sched_process_exec capturando nombres de procesos y PIDs"
+    width={900}
+    height={600}
+    class="rounded-lg"
+  />
+  <figcaption class="mt-2 text-sm text-center text-muted-foreground italic">
+    Captura en tiempo real de procesos ejecutados mediante el hook del scheduler sched_process_exec
+  </figcaption>
+</figure>
+
+<h2 id="casos_de_uso">✅ Casos de uso</h2>
+El ecosistema eBPF cuenta con proyectos de código abierto como:
+- <a href="https://cilium.io/" target="_blank">Cilium</a>: un proyecto especializado en la red, la seguridad y la observabilidad para entornos nativos de la nube, como Kubernetes entre otros. Utiliza eBPF para inyectar lógica de control, balanceo de carga, cifrado, y capacidades adicionales de seguridad directamente en el kernel.
+- <a href="https://www.parca.dev/" target="_blank">Parca</a>: un proyecto de código abierto para realizar profiling continuo. Utiliza eBPF para recolectar, de forma sistemática y con bajo overhead, perfiles de programas (CPU, memoria, I/O, etc.) en entornos de producción, y los almacena para permitir consultas y análisis de rendimiento.
+
+Existen otros proyectos y aunque en muchas ocasiones usemos eBPF a través de interfaces que nos facilitan y agilizan el trabajo es bueno comprender como funciona la tecnología para sacarle mayor provecho.
+
+<h2 id="conclusion">✨ Conclusión</h2>
+En ésta exploración de eBPF en lenguaje C vimos varios conceptos clave como los puntos de anclaje o *hooks*, las funciones auxiliares y los mapas eBPF, además escribimos ejemplos básicos y prácticos que nos permitieron comprender el flujo de trabajo: la generación de las cabeceras *vmlinux* y el esqueleto *exec.skel.h* para nuestros ejemplos usando la herramienta **bpftool**, la generación del *bytecode* para el kernel, la compilación del programa de usuario usando *clang* y la ejecución para ver la salida en la terminal. Al usar el lenguaje C se puede explorar de manera más directa la biblioteca libbpf además de abrir la posibilidad de usar eBPF en sistemas embebidos por medio de la compilación cruzada.
+
+El ecosistema de eBPF continúa evolucionando y expandiéndose. Hemos visto algunas posibilidades y casos de uso: monitoreo de red, creación de redes seguras, análisis de rendimiento e implementación de políticas de seguridad en tiempo real. En el próximo artículo profundizaremos en técnicas de profiling usando perf y eBPF, para analizar el comportamiento de nuestras aplicaciones mediante flamegraphs lo que permite identificar cuellos de botella y optimizar el rendimiento del sistema.
+
+Te animo a que modifiques los ejemplos presentados, explores diferentes hooks y pruebes con distintos tipos de mapas. Cada programa que escribas te acercará más a comprender el verdadero poder de esta tecnología. 
+
+<h2 id="bibliografia_y_recursos_recomendados">📚 Bibliografía y recursos recomendados</h2>
+- <a href="https://ebpf.io/" target="_blank">eBPF Documentation</a>
+- <a href="https://cilium.io/" target="_blank">Cilium</a>
+- <a href="https://www.parca.dev/docs/overview" target="_blank">Parca</a>
+- <a href="https://cylab.be/blog/352/a-practical-introduction-to-ebpf" target="_blank">A Practical Introduction to eBPF</a>
+- <a href="https://www.youtube.com/watch?v=-IGReOYExqo" target="_blank">BPF With C</a>
+- <a href="https://www.youtube.com/watch?v=0p987hCplbk" target="_blank">A Beginner's Guide to eBPF Programming for Networking - Liz Rice, Isovalent</a>
+- <a href="https://docs.kernel.org/bpf/libbpf/libbpf_overview.html" target="_blank">libbpf Overview</a>
+- <a href="https://github.com/libbpf/libbpf" target="_blank">libbpf GitHub Repository</a>
+- <a href="https://github.com/libbpf/bpftool" target="_blank">bpftool GitHub Repository</a>
+- <a href="https://docs.ebpf.io/concepts/core/" target="_blank">BPF CO-RE</a>
+- <a href="https://docs.ebpf.io/linux/concepts/resource-limit/" target="_blank">Resource limits</a>
