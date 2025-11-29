@@ -51,8 +51,8 @@ Some of the essential components of eBPF are: the virtual machine integrated int
 
     <h3 id="hooks">Attachment Points (Hooks) and eBPF Program Types</h3>
     The hooks are points in the kernel where eBPF programs can be attached to execute when the kernel reaches the hook. These points or hooks are associated with different events such as: network events, system calls, kernel tracepoints, hardware events, among others, even it is possible to create custom hooks.
-    <h3 id ="helper_functions">Helper Functions</h3>
     
+    <h3 id ="helper_functions">Helper Functions</h3>
     Because eBPF programs are limited and are restricted by the verifier to prevent breaking the system exist the helper functions, a set of functions in C defined by the kernel that form an internal API between the eBPF programs and the kernel. For instance, there are helper functions to print messages, manipulate network packets, monitor the system, interact with eBPF maps, among others. To see a list of helper functions organized by type you can visit this link <a href="https://docs.ebpf.io/linux/helper-function/" target="_blank">eBPF Docs. Helper functions</a> Or see the full list in the man page <a href="https://man7.org/linux/man-pages/man7/bpf-helpers.7.html" target="_blank">*list of eBPF helper functions*</a>.
     <h3 id ="eBPF_Maps">eBPF Maps</h3>
     Maps are the way eBPF programms communicate between each other in the kernel space and with the user space, there are generic maps for different use cases, maps to keep references to other maps, maps to transmit large amounts of information between the kernel and the user space, maps to facilitate the redirection of network packets between devices, among others. You can see a list of available maps in: <a href="https://docs.ebpf.io/linux/map-type/" target="_blank">*Map types (Linux)*</a>
